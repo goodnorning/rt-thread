@@ -18,11 +18,17 @@ def get_riscv64_default_arch_abi(gcc_bin):
         arch = None
         abi = None
         for line in result.splitlines():
-            if '-march=' in line:
-                arch = line.strip().split()[1]
-                arch = arch.split('_')[0]  # Get the base architecture, e.g., rv64imafdc
-            if '-mabi=' in line and 'option' not in line:
-                abi = line.strip().split()[1]
+            # Only match lines where -march= is the option name (at the start)
+            # Skip lines where -march= appears as a value of another option
+            stripped = line.strip()
+            if stripped.startswith('-march=') and stripped.split()[0].startswith('-march='):
+                val = stripped.split()[1]
+                # Skip pseudo-option like 'help' or '-march=help'
+                if val in ('help', '[disabled]') or val.startswith('-march='):
+                    continue
+                arch = val.split('_')[0]  # Get the base architecture, e.g., rv64imafdc
+            if stripped.startswith('-mabi=') and 'option' not in stripped:
+                abi = stripped.split()[1]
         return arch, abi
     except Exception as e:
         print("Error getting arch/abi:", e)
